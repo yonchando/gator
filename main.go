@@ -4,9 +4,11 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"github.com/yonchando/gator/internal/models/command"
 	"log"
 	"os"
+
+	middlewarepAuth "github.com/yonchando/gator/internal/middleware/auth"
+	"github.com/yonchando/gator/internal/models/command"
 
 	_ "github.com/lib/pq"
 
@@ -68,9 +70,11 @@ func main() {
 	cmds.Register("register", auth.HandlerRegister)
 	cmds.Register("users", auth.HandlerGetUsers)
 
-	cmds.Register("addfeed", feed.HandleAddFeed)
-	cmds.Register("feeds", feed.HandleFeed)
-	cmds.Register("follow", feed.HandleFeedFollow)
+	cmds.Register("addfeed", middlewarepAuth.MiddlewareLoggedIn(feed.HandleAddFeed))
+	cmds.Register("feeds", middlewarepAuth.MiddlewareLoggedIn(feed.HandleFeed))
+	cmds.Register("follow", middlewarepAuth.MiddlewareLoggedIn(feed.HandleFeedFollow))
+	cmds.Register("unfollow", middlewarepAuth.MiddlewareLoggedIn(feed.HandleFeedUnfollow))
+	cmds.Register("following", middlewarepAuth.MiddlewareLoggedIn(feed.HandleFeedFollowing))
 
 	args := os.Args
 

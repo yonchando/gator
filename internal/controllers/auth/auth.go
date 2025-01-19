@@ -11,7 +11,6 @@ import (
 	"github.com/yonchando/gator/internal/database"
 	"github.com/yonchando/gator/internal/models/command"
 	"github.com/yonchando/gator/internal/models/state"
-	modelUser "github.com/yonchando/gator/internal/models/user"
 )
 
 func HandlerLogin(s *state.State, cmd command.Command) error {
@@ -24,7 +23,7 @@ func HandlerLogin(s *state.State, cmd command.Command) error {
 	var user database.User
 	var err error
 
-	user, err = modelUser.GetUser(s, cmd.Args[2])
+	user, err = s.Db.GetUserByName(context.Background(), cmd.Args[2])
 	if err != nil {
 		return err
 	}

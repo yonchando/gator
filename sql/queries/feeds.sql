@@ -2,9 +2,19 @@
 SELECT * FROM feeds;
 
 -- name: GetFeedWithUser :many
-SELECT * FROM feeds
-left join users on users.id = feeds.user_id
+SELECT f.id as feed_id, f.name as feed_name, f.url,
+    u.id as user_id, u.name as user_name
+FROM feeds f
+left join users u on u.id = f.user_id
 ;
+
+-- name: GetFeedFollowsForUser :many
+SELECT f.id as feed_id, f.name as feed_name, 
+    u.id as user_id, u.name as user_name
+    FROM feeds f
+    left join feed_follows ff on f.id = ff.feed_id
+    left join users u on ff.user_id = u.id
+    WHERE u.id = $1;
 
 -- name: CreateFeed :one
 insert into feeds (id, name, url, user_id, created_at, updated_at)
@@ -21,4 +31,3 @@ SELECT * FROM feeds where url = $1;
 
 -- name: DeleteAllFeed :exec
 DELETE FROM feeds;
-

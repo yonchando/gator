@@ -8,32 +8,20 @@ import (
 
 	"github.com/yonchando/gator/internal/models/command"
 	"github.com/yonchando/gator/internal/models/state"
-	"github.com/yonchando/gator/internal/models/user"
 
 	"github.com/google/uuid"
 	"github.com/yonchando/gator/internal/database"
 	"github.com/yonchando/gator/internal/models"
-	modelUser "github.com/yonchando/gator/internal/models/user"
 )
 
-func HandleAddFeed(s *state.State, cmd command.Command) error {
+func HandleAddFeed(s *state.State, cmd command.Command, user database.User) error {
 
 	if len(cmd.Args) != 4 {
 		return errors.New("not enough args")
 	}
 
-	var user database.User
 	var err error
 	ctx := context.Background()
-
-	user, err = modelUser.GetUser(s, s.Cfg.CurrentUserName)
-	if err != nil {
-		return err
-	}
-
-	if user.Name == "" {
-		return errors.New("user not found")
-	}
 
 	var feed database.Feed
 
@@ -53,10 +41,24 @@ func HandleAddFeed(s *state.State, cmd command.Command) error {
 
 	fmt.Println(feed)
 
+	feedFollowParams := database.CreateFeedFollowParams{
+		ID:        uuid.New(),
+		UserID:    user.ID,
+		FeedID:    feed.ID,
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+	}
+
+	_, err = s.Db.CreateFeedFollow(ctx, feedFollowParams)
+
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
-func HandleFeed(s *state.State, cmd command.Command) error {
+func HandleFeed(s *state.State, cmd command.Command, user database.User) error {
 
 	ctx := context.Background()
 
@@ -71,24 +73,14 @@ func HandleFeed(s *state.State, cmd command.Command) error {
 	return nil
 }
 
-func HandleFeedFollow(s *state.State, cmd command.Command) error {
+func HandleFeedFollow(s *state.State, cmd command.Command, user database.User) error {
 
 	if len(cmd.Args) == 2 {
 		return errors.New("not enough args")
 	}
 
-	var dbUser database.User
-
-	dbUser, err := user.GetUser(s, s.Cfg.CurrentUserName)
-	if err != nil {
-		return err
-	}
-
-	if dbUser.Name == "" {
-		return errors.New("user not exists")
-	}
-
 	var feed database.Feed
+	var err error
 
 	ctx := context.Background()
 	feed, err = s.Db.GetFeedByUrl(ctx, cmd.Args[2])
@@ -98,7 +90,7 @@ func HandleFeedFollow(s *state.State, cmd command.Command) error {
 
 	feedFollowParams := database.CreateFeedFollowParams{
 		ID:        uuid.New(),
-		UserID:    dbUser.ID,
+		UserID:    user.ID,
 		FeedID:    feed.ID,
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
@@ -109,7 +101,51 @@ func HandleFeedFollow(s *state.State, cmd command.Command) error {
 		return err
 	}
 
-	fmt.Printf("%s has been follow %s\n", dbUser.Name, feed.Name)
+	fmt.Printf("%s has been follow %s\n", user.Name, feed.Name)
+
+	return nil
+}
+
+func HandleFeedUnfollow(s *state.State, cmd command.Command, user database.User) error {
+
+	var err error
+	var feed database.Feed
+	ctx := context.Background()
+
+	feed, err = s.Db.GetFeedByUrl(ctx, cmd.Args[2])
+	if err != nil {
+		return err
+	}
+
+	err = s.Db.DeleteFeedFollowByUrlAndUserId(ctx, database.DeleteFeedFollowByUrlAndUserIdParams{
+		UserID: user.ID,
+		FeedID: feed.ID,
+	})
+
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("%s unfollow %s\n", user.Name, feed.Name)
+
+	return nil
+
+}
+
+func HandleFeedFollowing(s *state.State, _ command.Command, user database.User) error {
+
+	var feedFollowsForUser []database.GetFeedFollowsForUserRow
+	var err error
+
+	feedFollowsForUser, err = s.Db.GetFeedFollowsForUser(context.Background(), user.ID)
+
+	if err != nil {
+		return err
+	}
+
+	for _, feedFollow := range feedFollowsForUser {
+		fmt.Println(feedFollow.FeedName)
+	}
 
 	return nil
 }
