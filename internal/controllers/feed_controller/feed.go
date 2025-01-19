@@ -1,12 +1,14 @@
-package feed
+package feed_controller
 
 import (
 	"context"
 	"database/sql"
 	"errors"
 	"fmt"
+	"log"
 	"time"
 
+	"github.com/lib/pq"
 	"github.com/yonchando/gator/internal/models/command"
 	"github.com/yonchando/gator/internal/models/state"
 
@@ -196,8 +198,37 @@ func scapeFeeds(s *state.State) error {
 	rss, err = models.FetchFeed(ctx, feed.Url)
 
 	for _, v := range rss.Channel.Item {
-		fmt.Println(v.Title)
+
+		var published_at time.Time
+		published_at, err = time.Parse("RFC3339", v.PubDate)
+
+		postParams := database.CreatePostParams{
+			ID:    uuid.New(),
+			Title: v.Title,
+			Url:   v.Link,
+			Description: sql.NullString{
+				String: v.Description,
+				Valid:  true,
+			},
+			PublishedAt: sql.NullTime{
+				Time:  published_at,
+				Valid: err == nil,
+			},
+			FeedID:    feed.ID,
+			CreatedAt: time.Now(),
+			UpdatedAt: time.Now(),
+		}
+
+		_, err = s.Db.CreatePost(ctx, postParams)
+
+		if e, ok := err.(*pq.Error); ok {
+			if e.Code != "23505" {
+				log.Println(e.Code.Name())
+			}
+		} else {
+			log.Println(err)
+		}
 	}
-	fmt.Println("Fetched")
+
 	return nil
 }

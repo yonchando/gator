@@ -13,8 +13,9 @@ import (
 	_ "github.com/lib/pq"
 
 	"github.com/yonchando/gator/internal/config"
-	"github.com/yonchando/gator/internal/controllers/auth"
-	"github.com/yonchando/gator/internal/controllers/feed"
+	"github.com/yonchando/gator/internal/controllers/auth_controller"
+	"github.com/yonchando/gator/internal/controllers/feed_controller"
+	post_controller "github.com/yonchando/gator/internal/controllers/post"
 	"github.com/yonchando/gator/internal/database"
 	"github.com/yonchando/gator/internal/models/state"
 )
@@ -30,6 +31,14 @@ func handlerReset(s *state.State, cmd command.Command) error {
 	if err != nil {
 		return err
 	}
+
+	err = s.Db.DeleteAllFeed(ctx)
+
+	if err != nil {
+		return err
+	}
+
+	err = s.Db.DeleteAllPosts(ctx)
 
 	err = s.Cfg.SetUser("")
 
@@ -64,17 +73,19 @@ func main() {
 	}
 
 	cmds.Register("reset", handlerReset)
-	cmds.Register("agg", feed.HandleAgg)
+	cmds.Register("agg", feed_controller.HandleAgg)
 
-	cmds.Register("login", auth.HandlerLogin)
-	cmds.Register("register", auth.HandlerRegister)
-	cmds.Register("users", auth.HandlerGetUsers)
+	cmds.Register("login", auth_controller.HandlerLogin)
+	cmds.Register("register", auth_controller.HandlerRegister)
+	cmds.Register("users", auth_controller.HandlerGetUsers)
 
-	cmds.Register("addfeed", middlewarepAuth.MiddlewareLoggedIn(feed.HandleAddFeed))
-	cmds.Register("feeds", middlewarepAuth.MiddlewareLoggedIn(feed.HandleFeed))
-	cmds.Register("follow", middlewarepAuth.MiddlewareLoggedIn(feed.HandleFeedFollow))
-	cmds.Register("unfollow", middlewarepAuth.MiddlewareLoggedIn(feed.HandleFeedUnfollow))
-	cmds.Register("following", middlewarepAuth.MiddlewareLoggedIn(feed.HandleFeedFollowing))
+	cmds.Register("addfeed", middlewarepAuth.MiddlewareLoggedIn(feed_controller.HandleAddFeed))
+	cmds.Register("feeds", middlewarepAuth.MiddlewareLoggedIn(feed_controller.HandleFeed))
+	cmds.Register("follow", middlewarepAuth.MiddlewareLoggedIn(feed_controller.HandleFeedFollow))
+	cmds.Register("unfollow", middlewarepAuth.MiddlewareLoggedIn(feed_controller.HandleFeedUnfollow))
+	cmds.Register("following", middlewarepAuth.MiddlewareLoggedIn(feed_controller.HandleFeedFollowing))
+
+	cmds.Register("browse", post_controller.HandleBrowse)
 
 	args := os.Args
 
