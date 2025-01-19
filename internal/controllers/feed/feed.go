@@ -2,6 +2,7 @@ package feed
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"time"
@@ -150,17 +151,53 @@ func HandleFeedFollowing(s *state.State, _ command.Command, user database.User) 
 	return nil
 }
 
-func HandleAgg(_ *state.State, _ command.Command) error {
+func HandleAgg(s *state.State, cmd command.Command) error {
 
-	ctx := context.Background()
-
-	rss, err := models.FetchFeed(ctx, "https://www.wagslane.dev/index.xml")
-
+	d, err := time.ParseDuration(cmd.Args[2])
 	if err != nil {
 		return err
 	}
 
-	fmt.Println(rss)
+	fmt.Println("Collecting feeds every 1m0s")
 
+	ticker := time.NewTicker(d)
+
+	for ; ; <-ticker.C {
+		fmt.Println("Fetching...")
+		scapeFeeds(s)
+	}
+}
+
+func scapeFeeds(s *state.State) error {
+
+	ctx := context.Background()
+
+	feed, err := s.Db.GetNextFeedToFetch(ctx)
+	if err != nil {
+		return err
+	}
+
+	markParams := database.MarkFeedFetchedParams{
+		LastFetchedAt: sql.NullTime{
+			Time:  time.Now(),
+			Valid: true,
+		},
+		UpdatedAt: time.Now(),
+		ID:        feed.ID,
+	}
+
+	err = s.Db.MarkFeedFetched(ctx, markParams)
+	if err != nil {
+		return err
+	}
+
+	var rss *models.RSSFeed
+
+	rss, err = models.FetchFeed(ctx, feed.Url)
+
+	for _, v := range rss.Channel.Item {
+		fmt.Println(v.Title)
+	}
+	fmt.Println("Fetched")
 	return nil
 }

@@ -9,7 +9,8 @@ create table feeds
     user_id    uuid           not null
         constraint feeds_fk_user_id references users (id) on delete cascade,
     created_at timestamp      not null,
-    updated_at timestamp      not null
+    updated_at timestamp      not null,
+    last_fetched_at timestamp
 );
 
 -- +goose Down
