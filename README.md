@@ -36,17 +36,27 @@ Install gator by run `go build or go install`
 command list
 
 `gator register yourname` register user
+
 `gator login username` login user
+
 `gator users` list all users register
 
+
 `gator addfeed "name" "https://yoururl.com"` store your feed
+
 `gator feeds` listing all feeds
+
 `gator follow "https://yoururl.com"` follow feed
+
 `gator unfollow "https://yoururl.com"` follow feed
+
 `gator following "https://yoururl.com"` list all your folow feeds
 
+
 `gator agg` scan feed url to get posts
+
 `gator browse (limit)` browse posts (limit is optional number, default 2)
+
 
 > Dangerous
 
